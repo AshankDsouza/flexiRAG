@@ -85,16 +85,34 @@ Local vs. API-hosted — the opposite of an advantage. It has no public local we
 
 ## Grounded Generation
 
-<!-- Explain how your system enforces grounding — how does it prevent the LLM from answering
-     beyond the retrieved documents?
-     Describe both your system prompt (what instruction you gave the model) and any structural
-     choices (e.g., how you formatted the context, whether you filtered low-relevance chunks).
-     Do not just say "I told it to use the documents" — show the actual instruction or explain
-     the mechanism. -->
+**System prompt grounding instruction:** Grounding is enforced with a system prompt that constrains
+the model to the retrieved context, plus a structured user message. The exact system prompt
+(`SYSTEM_PROMPT` in `RAG.py`) is:
 
-**System prompt grounding instruction:**
+> You are a research assistant answering questions about autonomous-vehicle human factors, trust, and
+> HMI design. Answer ONLY using the numbered context passages provided. If the answer is not contained
+> in the context, reply exactly: "I don't have enough information in the provided documents to answer
+> that." Do not use outside knowledge. Cite the source filename in square brackets, e.g.
+> [HCI_Topic_Paper.pdf], after each claim it supports.
 
-**How source attribution is surfaced in the response:**
+Three mechanisms make this work beyond just "use the documents": (1) the **only-from-context + explicit
+refusal phrase** turns "I don't know" into a required output rather than an option, so the model
+abstains instead of falling back on general knowledge (this is exactly what happened in the Q3 failure
+case — it refused rather than fabricate); (2) the retrieved chunks are passed as a **numbered context
+block**, each labelled with its source (`[i] (source: <filename>)`), and the user message repeats
+"Answer using only the context above, citing source filenames"; (3) **temperature is set to 0.1**, so
+generation stays close to the provided text rather than improvising. No low-relevance filtering is
+applied — all top-5 chunks are passed regardless of distance (a known limitation: see the Failure Case
+Analysis, where citation-heavy chunks still reached the model).
+
+**How source attribution is surfaced in the response:** Twice. (1) **Inline** — the model cites the
+source filename in square brackets after each claim, e.g. *"trust is shaped by dispositional and
+situational factors [Trusting_autonomous_vehicles_An_interdisciplinary_.pdf]."* This is reinforced
+structurally because every chunk already carries a `file_name:` prefix added during chunking, so the
+filename is visible to the model in the context itself. (2) **As an explicit source list** — after the
+answer, the `ask()` CLI prints a `--- retrieved sources ---` block listing each retrieved chunk's
+source file and its cosine distance, so the user can see exactly which documents (and how strong a
+match) the answer drew from.
 
 ---
 
@@ -119,17 +137,6 @@ bottleneck is retrieval, not generation. See the Failure Case Analysis below.
 ---
 
 ## Failure Case Analysis
-
-<!-- Identify at least one question where retrieval or generation did not work as expected.
-     Write a specific explanation of *why* it failed, tied to a part of the pipeline.
-
-     "The answer was wrong" is not an explanation.
-
-     "The relevant information was split across a chunk boundary, so retrieval returned
-     only half the context — the model didn't have enough to answer correctly" is an explanation.
-
-     "The embedding model treated the professor's nickname as out-of-vocabulary and returned
-     results from an unrelated review" is an explanation. -->
 
 **Question that failed:** "How should an autonomous vehicle communicate its intentions to
 pedestrians?" (Q3) — a question the corpus *can* answer: source #4 is a literature review of accessible
