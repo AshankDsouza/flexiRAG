@@ -55,14 +55,12 @@ Overlapping is not needed with semantic based chunking as overlap exists to prev
 
 ## Embedding Model
 
-     all-MiniLM-L6-v2 (via sentence-transformers)
+all-MiniLM-L6-v2 (via sentence-transformers)
 
-     Reasons for the choice:
-     - can run on personal laptop/machine on CPU
-     - is fast --took 5 seconds to compute
-     - doubles up as boundary detector for the semantic chunking
-
-
+Reasons for the choice:
+- can run on personal laptop/machine on CPU
+- is fast --took 5 seconds to compute
+- doubles up as boundary detector for the semantic chunking
 
 **Model used:**
 text-embedding-3-large 
