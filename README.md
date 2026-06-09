@@ -26,18 +26,11 @@ Human Machine Interfaces (HMI) which is a subset of HCI (Human Computer Interfac
 | 7 | *Inclusive Design of Autonomous Vehicles: A Public Dialogue — Summary Report* — U.S. Access Board (July 2021) | Government public-dialogue report | U.S. Access Board · `documents/usab-av-forum-summary-report.pdf` |
 | 8 | *NVIDIA Autonomous Vehicles Safety Report* — NVIDIA | Industry safety report / white paper | NVIDIA · `documents/auto-self-driving-safety-report.pdf` |
 | 9 | *Human Computer Interaction (HMI) in autonomous vehicles for alerting driver during overtaking and lane changing* — Umachigi, Michigan Technological University (CS5760 Topic Paper) | Academic course paper | `documents/HCI_Topic_Paper.pdf` |
-| 10 | **⚠️ STILL NEEDED — the corpus currently has only 9 unique documents. Add at least one more to meet the "≥10 documents" requirement, then re-run `ingest` + `index`.** | | |
+| 10 | *The influence of a color themed HMI on trust and take-over performance in automated vehicles* | Academic course paper | `documents/fpsyg-14-1128285 (4).pdf` |
 
 ---
 
 ## Chunking Strategy
-
-<!-- Describe your chunking approach with enough specificity that someone else could reproduce it.
-     Include:
-     - Chunk size (characters or tokens) and why that size fits your documents
-     - Overlap size and why (or why not) you used overlap
-     - Any preprocessing you did before chunking (e.g., stripping HTML, removing headers)
-     - What your final chunk count was across all documents -->
 
 Semantic chunking was used. Each sentenced is processed and compared to its neighboring sentence to check for an abrupt semantic shift. 
 
@@ -61,12 +54,6 @@ Overlapping is not needed with semantic based chunking as overlap exists to prev
 ---
 
 ## Embedding Model
-
-<!-- Name the embedding model you used and explain your choice.
-     Then answer: if you were deploying this system for real users and cost wasn't a constraint,
-     what tradeoffs would you weigh in choosing a different model?
-     Consider: context length limits, multilingual support, accuracy on domain-specific text,
-     latency, and local vs. API-hosted. -->
 
      all-MiniLM-L6-v2 (via sentence-transformers)
 
@@ -113,20 +100,21 @@ Local vs. API-hosted — the opposite of an advantage. It has no public local we
 
 ## Evaluation Report
 
-<!-- Run your 5 test questions from planning.md through your system and record the results.
-     Be honest — a partially accurate or inaccurate result that you explain well is more
-     valuable than a suspiciously perfect result. -->
-
 | # | Question | Expected answer | System response (summarized) | Retrieval quality | Response accuracy |
 |---|----------|-----------------|------------------------------|-------------------|-------------------|
-| 1 | | | | | |
-| 2 | | | | | |
-| 3 | | | | | |
-| 4 | | | | | |
-| 5 | | | | | |
+| 1 | What factors influence trust in autonomous vehicles? | Three layers (Hoff & Bashir, 2015): dispositional (personality, age, gender, culture), situational (system performance, task/environment, effort), and learned trust that grows with experience. | Names dispositional, situational, and learned factors incl. personality and cultural context; notes trust is felt and evolves with experience; cites Hoff & Bashir (2015). All 5 chunks from the correct paper at 0.156–0.205. | Relevant | Accurate |
+| 2 | What are key recommendations for designing the HMI in automated vehicles? | Keep the driver engaged/informed; issue alerts and Requests to Intervene (RTI) that quickly orient the driver; use multimodal alerts; scale request explicitness to driver loop-state (in/on/out-of-the-loop); synthesize existing guidelines. | Issue alerts that quickly orient the driver; multimodal alerts effective; scale RTI to in/on/out-of-the-loop; compile existing guidelines. Correct primary report + corroborating Renault paper (0.211–0.300). | Relevant | Accurate |
+| 3 | How should an autonomous vehicle communicate its intentions to pedestrians? | External HMI (eHMI) — external displays/visual signals — plus non-visual cues for accessibility (blind/low-vision, deaf). Covered by the accessible-AV review and U.S. Access Board report. | *"I don't have enough information in the provided documents to answer that."* — refused despite the corpus covering the topic. All chunks at ~0.50 (≈3× worse); right document at rank 3 but only bibliography/tangential chunks pulled. | **Off-target** | **Inaccurate (failed to answer)** |
+| 4 | How does automation level affect driver situation awareness? | Higher automation (esp. Level 3 / out-of-the-loop) reduces situation awareness as the driver disengages; more takeover lead time and more specific alert cues improve it during transfer of control. | More takeover time and alert-cue specificity improve SA, but explicitly hedges it "does not offer a comprehensive comparison across automation levels." Correct doc (0.260–0.304) but 4/5 chunks were reference-list entries. | Partially relevant | Partially accurate |
+| 5 | What is the human-centered multimodal interpreter proposed to explain the actions of autonomous vehicles? | The "What's Happening" paper's Human-centered Multimodal Interpreter: explains AV behavior to non-experts via a visual interface (BEV, maps, text) + voice via a fine-tuned LLM; real-time, concise explanations to improve transparency/trust/acceptance. | A system combining a visual interface (BEV, maps, text) with voice via a fine-tuned LLM; provides real-time, comprehensible explanations of driving behavior. All 5 chunks from the correct paper (0.317–0.367). | Relevant | Accurate |
 
-**Retrieval quality:** Relevant / Partially relevant / Off-target  
-**Response accuracy:** Accurate / Partially accurate / Inaccurate
+**Retrieval quality:** Relevant (Q1, Q2, Q5) · Partially relevant (Q4) · Off-target (Q3)  
+**Response accuracy:** Accurate (Q1, Q2, Q5) · Partially accurate (Q4) · Inaccurate (Q3)
+
+**Overall:** 3 of 5 fully accurate, 1 partial, 1 failure (Q3). Across the board, response quality
+tracked retrieval quality — the only inaccurate answer (Q3) is the only one where retrieval was
+off-target (all chunks ~0.50 distance vs ~0.16–0.37 for the accurate answers), confirming the
+bottleneck is retrieval, not generation. See the Failure Case Analysis below.
 
 ---
 
@@ -143,37 +131,57 @@ Local vs. API-hosted — the opposite of an advantage. It has no public local we
      "The embedding model treated the professor's nickname as out-of-vocabulary and returned
      results from an unrelated review" is an explanation. -->
 
-**Question that failed:**
+**Question that failed:** "How should an autonomous vehicle communicate its intentions to
+pedestrians?" (Q3) — a question the corpus *can* answer: source #4 is a literature review of accessible
+AV human-computer interaction and source #7 (U.S. Access Board) discusses how vehicles convey
+direction of travel and alerts to people who are blind or deaf.
 
-**What the system returned:**
+**What the system returned:** *"I don't have enough information in the provided documents to answer
+that."* — a refusal, despite relevant documents existing in the corpus.
 
-**Root cause (tied to a specific pipeline stage):**
+**Root cause (tied to a specific pipeline stage):** The failure is in **retrieval (embedding + chunk
+content)**, not generation. Two compounding effects: (1) **Bibliography pollution** — several PDFs
+have large reference sections, and semantic chunking turns those citation lists into chunks dense
+with on-topic keywords ("autonomous vehicle", "pedestrians") but containing no actual answer; they
+score deceptively well and crowd the top-5. (2) **Vocabulary mismatch** — the query says "communicate
+its intentions to pedestrians," while the relevant paper frames it as "external communication." The
+small `all-MiniLM-L6-v2` model didn't bridge these, so *every* retrieved chunk sat at ~0.50 cosine
+distance (≈3× worse than the accurate answers at ~0.16). The right document surfaced at rank 3, but
+the right *passage* didn't enter the context — so the grounding prompt correctly refused rather than
+fabricate. The grounding did its job; retrieval is the bottleneck.
 
-**What you would change to fix it:**
+**What you would change to fix it:** (1) **Strip reference/bibliography sections before chunking**
+(cut everything after a "References" heading) so citation lists stop competing for retrieval slots —
+the highest-leverage fix, likely to resolve Q3 and improve Q4. (2) **Increase k to 8–10** so a
+relevant passage at a deeper rank can still enter the context. (3) **Add query rewriting / a larger
+embedding model** with stronger paraphrase matching to bridge the "intentions to pedestrians" ↔
+"external communication" vocabulary gap.
 
 ---
 
 ## Spec Reflection
 
-<!-- Reflect on how planning.md shaped your implementation.
-     Answer both questions with at least 2–3 sentences each. -->
+**One way the spec helped you during implementation:** Writing the Chunking Strategy and Retrieval
+Approach sections *before* coding meant I had concrete, testable parameters to hand the AI tool —
+semantic splitting with `buffer_size=1`, a 95th-percentile breakpoint, a 256-token cap, top-k=5,
+`all-MiniLM-L6-v2`, ChromaDB with cosine. Because those numbers were written down, the generated
+ingestion and retrieval code matched intent on the first pass, and I could *verify* it against the
+spec rather than guess — e.g. re-tokenising every chunk to confirm the 256-token cap actually held
+(mean ≈185, max 258). The 5 planned evaluation questions likewise gave the evaluation a fixed target
+instead of cherry-picking questions after the fact.
 
-**One way the spec helped you during implementation:**
-
-**One way your implementation diverged from the spec, and why:**
+**One way your implementation diverged from the spec, and why:** The spec called for AutoRAG's
+built-in `Semantic_llama_index` chunker, but it deadlocked on this machine — its LlamaIndex
+`HuggingFaceEmbedding` backend fork-bombed and hung at 0% CPU on macOS + torch, reproducibly. Rather
+than abandon semantic chunking, I diverged by re-implementing the *identical* algorithm in
+`semantic_chunk.py` using `sentence-transformers` directly (same `buffer_size`, same 95th-percentile
+breakpoint, same embedding model), while still parsing with AutoRAG. The divergence was forced by a
+tooling failure, not a change of design — the spec's intent (meaning-based boundaries) was preserved,
+and the switch also let me add the 256-token cap that fixed a silent-truncation bug.
 
 ---
 
 ## AI Usage
-
-<!-- Describe at least 2 specific instances where you used an AI tool during this project.
-     For each: what did you give the AI as input, what did it produce, and what did you
-     change, override, or direct differently?
-
-     "I used Claude to help me code" is not sufficient.
-     "I gave Claude my Chunking Strategy section from planning.md and asked it to implement
-     chunk_text(). It returned a function using a fixed character split. I overrode the
-     chunk size from 500 to 200 because my documents are short reviews, not long guides." -->
 
 **Instance 1**
 
@@ -194,7 +202,7 @@ The chunking strategy that it used has pretty large cosine distance between chun
 
 **Instance 2**
 
-- *What I gave the AI:*
-- *What it produced:*
-- *What I changed or overrode:*
+- *What I gave the AI:* Build a evaluation test questions.
+- *What it produced:* Produced the questions in test.md
+- *What I changed or overrode:* Everything accepted. 
 # flexiRAG
