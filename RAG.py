@@ -40,24 +40,27 @@ TOP_K = 5
 
 
 # --------------------------------------------------------------------------- #
-# Stage 1 — ingestion (parse + chunk) with AutoRAG
+# Stage 1 — ingestion: parse with AutoRAG, chunk semantically
 # --------------------------------------------------------------------------- #
+# NOTE: AutoRAG's own `Semantic_llama_index` chunker deadlocks on this machine
+# (its LlamaIndex HuggingFaceEmbedding backend fork-bombs and hangs at 0% CPU on
+# macOS + torch). We parse with AutoRAG, then run the identical semantic-split
+# algorithm via semantic_chunk.py using the sentence-transformers model that the
+# retrieval stage already uses reliably. See semantic_chunk.py for details.
 def ingest() -> None:
-    """Parse every PDF and chunk the parsed text."""
-    from autorag.chunker import Chunker
+    """Parse every PDF (AutoRAG) and semantically chunk the parsed text."""
     from autorag.parser import Parser
+
+    import semantic_chunk
 
     os.makedirs(PARSE_PROJECT_DIR, exist_ok=True)
     print(f"Parsing PDFs from {DOCS_GLOB} ...")
     parser = Parser(data_path_glob=DOCS_GLOB, project_dir=PARSE_PROJECT_DIR)
     parser.start_parsing(PARSE_CONFIG)
-    parsed = os.path.join(PARSE_PROJECT_DIR, "parsed_result.parquet")
-    print(f"Parsed -> {parsed}")
+    print(f"Parsed -> {os.path.join(PARSE_PROJECT_DIR, 'parsed_result.parquet')}")
 
-    os.makedirs(CHUNK_PROJECT_DIR, exist_ok=True)
-    print("Chunking parsed text ...")
-    chunker = Chunker.from_parquet(parsed_data_path=parsed, project_dir=CHUNK_PROJECT_DIR)
-    chunker.start_chunking(CHUNK_CONFIG)
+    print("Semantic chunking parsed text ...")
+    semantic_chunk.main()
     print(f"Chunked -> {CHUNK_PROJECT_DIR}")
 
 
