@@ -210,4 +210,79 @@ The chunking strategy that it used has pretty large cosine distance between chun
 - *What I gave the AI:* Build a evaluation test questions.
 - *What it produced:* Produced the questions in test.md
 - *What I changed or overrode:* Everything accepted. 
-# flexiRAG
+
+---
+
+## Sample Chunks
+
+Five representative chunks from the index (772 chunks across 10 documents), each labelled with its
+source document. Snippets are trimmed for readability; every stored chunk is also prefixed with
+`file_name: <source>` so the source travels into the embedding.
+
+1. **`2501.05322v2.pdf`** — "(2017) demonstrated that bird's-eye views significantly reduce users'
+   cognitive load. Utilizing integrated map, including trip tracks and vehicle location, offers
+   familiar geographic context, similar to Google Maps Navigation. Integrated maps provide accurate
+   road and environmental information…"
+
+2. **`auto-self-driving-safety-report.pdf`** — "We follow and maintain a cybersecurity management
+   system as defined in UNECE Regulation No. 155. In addition, we use the ISO/SAE 21434 cybersecurity
+   [standard]. The NVIDIA threat intelligence team (NTIP) delivers actionable intelligence to various
+   NVIDIA Business Units, including automotive…"
+
+3. **`HMI-and-Automation-Design-Recommendations.pdf`** — "There was also a lot of variability in the
+   number of different guidelines adhered to in a single study. More research in this area could help
+   evaluate how combinations of guidance can help improve safety, performance, and user experience.
+   Such work can also help prioritize different features…"
+
+4. **`fpsyg-14-1128285 (4).pdf`** — "I trust the system's mode of operation during system maneuvers
+   (G7 — Trust purpose). I feel fine handing over control to the system. The system is a reliable
+   partner. [Forster et al. (2017), modified by Jian et al., 2000]…"
+
+5. **`1-s2.0-S2405896316322418-main.pdf`** — "In the second step, the information requirements were
+   determined, based on human-machine cooperation and the principles of transparency defined by Lyons
+   (2013). This led to the definition of an algorithm. In this step, we also defined the format and
+   the display modality of the information…"
+
+---
+
+## Query Interface
+
+A command-line interface: `python RAG.py ask "<your question>"`.
+
+**Input fields:**
+- `question` (required) — a natural-language question in double quotes.
+- `-k <int>` (optional, default 5) — how many chunks to retrieve and pass to the LLM.
+
+**Output fields:**
+- **Answer** — a grounded, natural-language answer generated only from the retrieved chunks, with the
+  **source filename cited inline in square brackets** after each supported claim.
+- **Retrieved sources** — a `--- retrieved sources ---` list showing each retrieved chunk's source
+  document and its **cosine distance** (lower = closer match), so the user can see what the answer
+  drew from and how strong each match was.
+
+**Sample interaction transcript:**
+
+```text
+$ python RAG.py ask "What is the human-centered multimodal interpreter for autonomous vehicles?"
+
+Q: What is the human-centered multimodal interpreter for autonomous vehicles?
+
+The human-centered multimodal interpreter for autonomous vehicles is a system that combines
+various presentation modalities and employs prompt engineering to fine-tune a Large Language
+Model (LLM) [2501.05322v2.pdf]. It integrates a visual interface featuring Bird's Eye View (BEV),
+maps, and text displays with voice interaction facilitated by the fine-tuned LLM [2501.05322v2.pdf].
+This system provides real-time, concise, and comprehensible responses to user queries, and it has
+been shown to significantly boost passenger trust in autonomous vehicles [2501.05322v2.pdf].
+
+--- retrieved sources ---
+  [1] 2501.05322v2.pdf  (cosine distance 0.300)
+  [2] 2501.05322v2.pdf  (cosine distance 0.357)
+  [3] 3750069.3750162.pdf  (cosine distance 0.385)
+  [4] 2501.05322v2.pdf  (cosine distance 0.388)
+  [5] 3750069.3750162.pdf  (cosine distance 0.403)
+```
+
+## How to run:
+
+bash setup.sh
+`python RAG.py ask "<your question>"`.
